@@ -4,8 +4,8 @@ from tkinter import ttk, messagebox
 class AppListaTareas:
     def __init__(self, root, servicio):
         self.root = root
-        self.root.title("To-Do List Interactiva (Con Atajos)") 
-        self.root.geometry("550x480") 
+        self.root.title("To-Do List Interactiva (Con Atajos)")
+        self.root.geometry("550x480")
         self.servicio = servicio
 
         self._crear_interfaz()
@@ -13,7 +13,6 @@ class AppListaTareas:
         self.actualizar_lista()
 
     def _crear_interfaz(self):
-        # Entrada de datos
         frame_top = tk.Frame(self.root, pady=10)
         frame_top.pack(fill="x", padx=10)
 
@@ -24,11 +23,9 @@ class AppListaTareas:
         self.btn_add = tk.Button(frame_top, text="Añadir", bg="#4CAF50", fg="white", command=self.evento_agregar)
         self.btn_add.pack(side="left")
 
-        # Texto de ayuda visual para enseñar los atajos al usuario
         texto_atajos = "ATAJOS: [Enter] Añadir | [C] Completar | [D] o [Supr] Eliminar | [Esc] Salir"
         tk.Label(self.root, text=texto_atajos, fg="gray", font=("Arial", 8, "italic")).pack(pady=2)
 
-        # Treeview
         frame_mid = tk.Frame(self.root)
         frame_mid.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -43,11 +40,9 @@ class AppListaTareas:
         self.tree.column("estado", width=100, anchor="center")
         self.tree.pack(fill="both", expand=True)
 
-        # Se añadió 'tachado' a las tareas completadas
         self.tree.tag_configure("pendiente", foreground="black")
         self.tree.tag_configure("completada", foreground="gray", font=("Arial", 9, "italic", "overstrike"))
 
-        # Botones de Acción
         frame_bot = tk.Frame(self.root, pady=10)
         frame_bot.pack(fill="x")
 
@@ -59,6 +54,14 @@ class AppListaTareas:
         self.entry_desc.bind("<Return>", self.evento_agregar)
         self.tree.bind("<Double-1>", self.evento_completar)
 
+        # NUEVOS ATAJOS GLOBALES DE TECLADO
+        self.root.bind("<Escape>", self.evento_salir)
+        self.root.bind("<c>", self.evento_completar)
+        self.root.bind("<C>", self.evento_completar)
+        self.root.bind("<d>", self.evento_eliminar)
+        self.root.bind("<D>", self.evento_eliminar)
+        self.root.bind("<Delete>", self.evento_eliminar)
+
     # MÉTODOS DE EVENTOS
     def evento_agregar(self, event=None):
         desc = self.entry_desc.get()
@@ -67,9 +70,14 @@ class AppListaTareas:
             self.entry_desc.delete(0, tk.END)
             self.actualizar_lista()
         else:
-            messagebox.showwarning("Aviso", msj)
+            if not event: # Evita spam si se presiona Enter con el campo vacío
+                messagebox.showwarning("Aviso", msj)
 
     def evento_completar(self, event=None):
+        # VALIDACIÓN: Si el usuario está escribiendo en el Entry, ignora la tecla 'C'
+        if self.root.focus_get() == self.entry_desc:
+            return
+
         seleccion = self.tree.selection()
         if not seleccion:
             if not event: 
@@ -82,15 +90,24 @@ class AppListaTareas:
         self.actualizar_lista()
 
     def evento_eliminar(self, event=None):
+        # VALIDACIÓN: Si el usuario está escribiendo en el Entry, ignora la tecla 'D'
+        if self.root.focus_get() == self.entry_desc:
+            return
+
         seleccion = self.tree.selection()
         if not seleccion:
-            messagebox.showwarning("Aviso", "Seleccione una tarea para eliminarla.")
+            if not event:
+                messagebox.showwarning("Aviso", "Seleccione una tarea para eliminarla.")
             return
 
         item = self.tree.item(seleccion[0])
         id_tarea = int(item['values'][0])
         self.servicio.eliminar_tarea(id_tarea)
         self.actualizar_lista()
+
+    def evento_salir(self, event=None):
+        """Cierra la aplicación de forma segura"""
+        self.root.destroy()
 
     def actualizar_lista(self):
         for fila in self.tree.get_children():
